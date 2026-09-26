@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { byMap, inRange, playedWith, summarize, TIME_LABELS, unique, type TimeRange } from "@/lib/analysis";
 import { ago, clock, km, mmss, num, pct } from "@/lib/format";
-import { isFpp, modeLabel, SHARDS, SHARD_LABELS, type ApiResponse, type MatchSummary, type Shard } from "@/lib/types";
+import { isFpp, isTdm, modeLabel, SHARDS, SHARD_LABELS, type ApiResponse, type MatchSummary, type Shard } from "@/lib/types";
 import FormChart from "./FormChart";
 import MatchDetail from "./MatchDetail";
 import SeasonPanel from "./SeasonPanel";
@@ -18,10 +18,11 @@ interface Stored {
   favorites: { name: string; shard: Shard }[];
   interval: number;
   notify: boolean;
+  hideTdm: boolean;
 }
 
 function readStore(): Stored {
-  const empty: Stored = { recent: [], favorites: [], interval: 30, notify: false };
+  const empty: Stored = { recent: [], favorites: [], interval: 30, notify: false, hideTdm: true };
   try {
     const raw = localStorage.getItem(STORE_KEY);
     return raw ? { ...empty, ...JSON.parse(raw) } : empty;
@@ -58,12 +59,13 @@ export default function Dashboard() {
   const [lastFetch, setLastFetch] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const [newIds, setNewIds] = useState<Set<string>>(new Set());
-  const [modeFilter, setModeFilter] = useState(ALL);
-  const [mapFilter, setMapFilter] = useState(ALL);
+  // Tomt sæt = alle. Flere kan vælges samtidig (fx 2 ud af 6 maps).
+  const [modeFilter, setModeFilter] = useState<Set<string>>(new Set());
+  const [mapFilter, setMapFilter] = useState<Set<string>>(new Set());
   const [range, setRange] = useState<TimeRange>("alle");
   const [open, setOpen] = useState<string | null>(null);
   const [limit, setLimit] = useState(30);
-  const [store, setStore] = useState<Stored>({ recent: [], favorites: [], interval: 30, notify: false });
+  const [store, setStore] = useState<Stored>({ recent: [], favorites: [], interval: 30, notify: false, hideTdm: true });
 
   const dataRef = useRef<ApiResponse | null>(null);
   const busy = useRef(false);
@@ -134,8 +136,8 @@ export default function Dashboard() {
     dataRef.current = null;
     setData(null);
     setError(null);
-    setModeFilter(ALL);
-    setMapFilter(ALL);
+    setModeFilter(new Set());
+    setMapFilter(new Set());
     setRange("alle");
     setLimit(30);
     setNameInput(qName);
@@ -206,8 +208,8 @@ export default function Dashboard() {
   }
 
   function pick(id: string) {
-    setModeFilter(ALL);
-    setMapFilter(ALL);
+    setModeFilter(new Set());
+    setMapFilter(new Set());
     setRange("alle");
     setOpen(id);
     setNewIds((s) => {
@@ -220,14 +222,20 @@ export default function Dashboard() {
 
   const matches = useMemo(() => data?.matches ?? [], [data]);
   const inTime = useMemo(() => inRange(matches, range, now), [matches, range, Math.floor(now / 60_000)]); // eslint-disable-line react-hooks/exhaustive-deps
-  const modes = useMemo(() => unique(matches.map((m) => m.mode)), [matches]);
-  const maps = useMemo(() => unique(matches.map((m) => m.map)), [matches]);
+  const hideTdm = store.hideTdm;
+  const base = useMemo(() => (hideTdm ? matches.filter((m) => !isTdm(m)) : matches), [matches, hideTdm]);
+  const tdmCount = useMemo(() => matches.filter(isTdm).length, [matches]);
+  const modes = useMemo(() => unique(base.map((m) => m.mode)), [base]);
+  const maps = useMemo(() => unique(base.map((m) => m.map)).sort(), [base]);
   const filtered = useMemo(
     () =>
       inTime.filter(
-        (m) => (modeFilter === ALL || m.mode === modeFilter) && (mapFilter === ALL || m.map === mapFilter)
+        (m) =>
+          (!hideTdm || !isTdm(m)) &&
+          (modeFilter.size === 0 || modeFilter.has(m.mode)) &&
+          (mapFilter.size === 0 || mapFilter.has(m.map))
       ),
-    [inTime, modeFilter, mapFilter]
+    [inTime, modeFilter, mapFilter, hideTdm]
   );
   const summary = useMemo(() => summarize(filtered), [filtered]);
   const mapRows = useMemo(() => byMap(filtered), [filtered]);
@@ -397,21 +405,47 @@ export default function Dashboard() {
               render={(v) => TIME_LABELS[v as TimeRange]}
               onChange={(v) => setRange(v as TimeRange)}
             />
-            <FilterRow label="Mode" value={modeFilter} options={modes} render={modeLabel} onChange={setModeFilter} />
-            <FilterRow label="Map" value={mapFilter} options={maps} render={(m) => m} onChange={setMapFilter} />
+            <MultiFilter label="Mode" selected={modeFilter} options={modes} render={modeLabel} onChange={setModeFilter} />
+            <MultiFilter label="Map" selected={mapFilter} options={maps} render={(m) => m} onChange={setMapFilter} />
+            <div className="filter-row">
+              <span className="filter-label">Exclude</span>
+              <button
+                type="button"
+                className="chip chip-toggle"
+                aria-pressed={hideTdm}
+                onClick={() => {
+                  updateStore((s) => ({ ...s, hideTdm: !s.hideTdm }));
+                  setModeFilter(new Set());
+                }}
+              >
+                {hideTdm ? "✓ " : ""}Hide TDM{tdmCount ? ` (${tdmCount})` : ""}
+              </button>
+              {(modeFilter.size > 0 || mapFilter.size > 0) && (
+                <button
+                  type="button"
+                  className="chip chip-clear"
+                  onClick={() => {
+                    setModeFilter(new Set());
+                    setMapFilter(new Set());
+                  }}
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
           </section>
 
           <section className="summary" aria-label="Summary of shown matches">
             <Stat value={summary.n} label="matches" />
-            <Stat value={summary.wins} label="chicken dinners" tone="gold" />
-            <Stat value={`${summary.top10}`} label={`top 10 (${pct(summary.n ? summary.top10 / summary.n : 0)})`} />
-            <Stat value={num(summary.kd, 2)} label="K/D" />
-            <Stat value={num(summary.avgDmg)} label="damage per match" tone="red" />
-            <Stat value={num(summary.avgKills, 1)} label="kills per match" />
-            <Stat value={`#${num(summary.avgPlace, 1)}`} label="avg. placement" />
-            <Stat value={pct(summary.hs)} label="headshot rate" />
-            <Stat value={mmss(summary.avgSurvived)} label="avg. survived" />
-            <Stat value={km(summary.avgDistance)} label="avg. distance" />
+            <Stat value={summary.wins} label="chicken dinners" tone="win" />
+            <Stat value={`${summary.top10}`} label={`top 10 (${pct(summary.n ? summary.top10 / summary.n : 0)})`} tone="top" />
+            <Stat value={`#${num(summary.avgPlace, 1)}`} label="avg. placement" tone="place" />
+            <Stat value={num(summary.kd, 2)} label="K/D" tone="kills" />
+            <Stat value={num(summary.avgKills, 1)} label="kills per match" tone="kills" />
+            <Stat value={num(summary.avgDmg)} label="avg. damage" tone="dmg" />
+            <Stat value={pct(summary.hs)} label="headshot rate" tone="hs" />
+            <Stat value={mmss(summary.avgSurvived)} label="avg. survived" tone="time" />
+            <Stat value={km(summary.avgDistance)} label="avg. distance" tone="time" />
           </section>
 
           <div className="layout">
@@ -430,13 +464,13 @@ export default function Dashboard() {
                     <div className="list-head" aria-hidden="true">
                       <span>Place</span>
                       <span>Match</span>
-                      <span>Kills</span>
-                      <span>Damage</span>
+                      <span className="t-kills">Kills</span>
+                      <span className="t-dmg">Damage</span>
                       <span>Assists</span>
                       <span>Knocks</span>
-                      <span>HS</span>
+                      <span className="t-hs">HS</span>
                       <span>Longest</span>
-                      <span>Survived</span>
+                      <span className="t-time">Survived</span>
                     </div>
                     <ol className="matches">
                       {filtered.map((m) => (
@@ -537,7 +571,7 @@ export default function Dashboard() {
                       {mapRows.map((r) => (
                         <tr key={r.map}>
                           <th scope="row">
-                            <button type="button" className="linkish" onClick={() => setMapFilter(r.map)}>
+                            <button type="button" className="linkish" onClick={() => setMapFilter(new Set([r.map]))}>
                               {r.map}
                             </button>
                           </th>
@@ -602,7 +636,9 @@ function ZoneTimer({ fraction }: { fraction: number }) {
   );
 }
 
-function Stat({ value, label, tone }: { value: string | number; label: string; tone?: "gold" | "red" }) {
+type Tone = "win" | "top" | "place" | "kills" | "dmg" | "hs" | "time";
+
+function Stat({ value, label, tone }: { value: string | number; label: string; tone?: Tone }) {
   return (
     <div className={`stat ${tone ?? ""}`}>
       <span className="stat-value">{value}</span>
@@ -637,6 +673,48 @@ function FilterRow({
   );
 }
 
+// Multivalg: klik på en chip slår den til/fra. "All" nulstiller.
+function MultiFilter({
+  label,
+  selected,
+  options,
+  render,
+  onChange,
+}: {
+  label: string;
+  selected: Set<string>;
+  options: string[];
+  render: (v: string) => string;
+  onChange: (v: Set<string>) => void;
+}) {
+  if (options.length < 2) return null;
+  return (
+    <div className="filter-row" role="group" aria-label={label}>
+      <span className="filter-label">{label}</span>
+      <button type="button" className="chip" aria-pressed={selected.size === 0} onClick={() => onChange(new Set())}>
+        All
+      </button>
+      {options.map((o) => (
+        <button
+          key={o}
+          type="button"
+          className="chip"
+          aria-pressed={selected.has(o)}
+          onClick={() => {
+            const next = new Set(selected);
+            if (next.has(o)) next.delete(o);
+            else next.add(o);
+            onChange(next.size === options.length ? new Set() : next);
+          }}
+        >
+          {render(o)}
+        </button>
+      ))}
+      {selected.size > 0 && <span className="muted small">{selected.size} selected</span>}
+    </div>
+  );
+}
+
 function MatchRow({
   m,
   now,
@@ -666,29 +744,29 @@ function MatchRow({
         <span className="c-meta">
           <span className="map">
             {m.map}
-            {isNew && <span className="tag tag-new">Ny</span>}
+            {isNew && <span className="tag tag-new">New</span>}
             {m.matchType === "competitive" && <span className="tag">Ranked</span>}
           </span>
           <span className="sub">
             {ago(m.createdAt, now)} · {modeLabel(m.mode)} · {m.team.length > 1 ? m.team.filter((t) => !t.isMe).map((t) => t.name).join(", ") : "solo"}
           </span>
         </span>
-        <Cell v={m.kills} l="kills" strong />
-        <Cell v={m.damage} l="damage" strong />
+        <Cell v={m.kills} l="kills" strong tone="kills" />
+        <Cell v={m.damage} l="damage" strong tone="dmg" />
         <Cell v={m.assists} l="assists" />
         <Cell v={m.dbnos} l="knocks" />
-        <Cell v={m.headshots} l="headshots" />
+        <Cell v={m.headshots} l="headshots" tone="hs" />
         <Cell v={m.longestKill ? `${Math.round(m.longestKill)} m` : "–"} l="longest kill" />
-        <Cell v={mmss(m.timeSurvived)} l="survived" />
+        <Cell v={mmss(m.timeSurvived)} l="survived" tone="time" />
       </button>
       {children}
     </li>
   );
 }
 
-function Cell({ v, l, strong }: { v: string | number; l: string; strong?: boolean }) {
+function Cell({ v, l, strong, tone }: { v: string | number; l: string; strong?: boolean; tone?: Tone }) {
   return (
-    <span className={`cell ${strong ? "cell-strong" : ""}`}>
+    <span className={`cell ${strong ? "cell-strong" : ""} ${tone ? `t-${tone}` : ""}`}>
       <span className="cell-v">{v}</span>
       <span className="cell-l">{l}</span>
     </span>

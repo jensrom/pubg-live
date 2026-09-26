@@ -225,10 +225,16 @@ export function mapName(raw: string): string {
 }
 
 export function modeLabel(mode: string): string {
+  if (/tdm/i.test(mode)) return "TDM";
   const [base, view] = mode.split("-");
   const known = ["solo", "duo", "squad"];
   if (!known.includes(base)) return mode;
   return `${base[0].toUpperCase()}${base.slice(1)} ${view === "fpp" ? "FPP" : "TPP"}`;
+}
+
+/** Team Deathmatch og andre arcade-modes tæller ikke som rigtige BR-kampe. */
+export function isTdm(m: { mode: string; matchType?: string }) {
+  return /tdm/i.test(m.mode);
 }
 
 export function isFpp(mode: string) {

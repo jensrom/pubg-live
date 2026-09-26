@@ -13,6 +13,16 @@
   --top: #e0b43c; /* gul */
   --red: #d9634f; /* rød */
   --rest: #8c8477;
+  /* Nøgletal har faste farver, så samme tal har samme farve i opsummering og kampliste */
+  --c-kills: var(--accent);
+  --c-dmg: var(--red);
+  --c-win: var(--win);
+  --c-top: var(--top);
+  --c-place: var(--beige);
+  --c-hs: #8fb1d9;
+  --c-time: #b9ae9a;
+  --row-alt: #1a1917;
+  --grid-line: #2c2a26;
   --grid: rgba(242, 238, 230, 0.025);
   --cond: "Barlow Condensed", "Arial Narrow", sans-serif;
   --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -1341,6 +1351,145 @@ tr.me td {
   color: var(--accent);
 }
 
+/* ---------- Tabel-look: opsummering + kampliste ---------- */
+
+.summary {
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.summary .stat {
+  padding: 0.75rem 0.9rem 0.8rem;
+  border-right: 1px solid var(--grid-line);
+  border-top: 3px solid transparent;
+  margin-right: -1px;
+}
+
+.stat.win { border-top-color: var(--c-win); background: rgba(95, 184, 122, 0.08); }
+.stat.top { border-top-color: var(--c-top); }
+.stat.place { border-top-color: var(--c-place); }
+.stat.kills { border-top-color: var(--c-kills); }
+.stat.dmg { border-top-color: var(--c-dmg); background: rgba(217, 99, 79, 0.07); }
+.stat.hs { border-top-color: var(--c-hs); }
+.stat.time { border-top-color: var(--c-time); }
+
+.stat.win .stat-value { color: var(--c-win); }
+.stat.top .stat-value { color: var(--c-top); }
+.stat.place .stat-value { color: var(--c-place); }
+.stat.kills .stat-value { color: var(--c-kills); }
+.stat.dmg .stat-value { color: var(--c-dmg); }
+.stat.hs .stat-value { color: var(--c-hs); }
+
+/* Kolonnefarver (header + celler) */
+.list-head .t-kills, .cell.t-kills .cell-v { color: var(--c-kills); }
+.list-head .t-dmg, .cell.t-dmg .cell-v { color: var(--c-dmg); }
+.list-head .t-hs, .cell.t-hs .cell-v { color: var(--c-hs); }
+.list-head .t-time, .cell.t-time .cell-v { color: var(--c-time); }
+
+.list-head {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  padding: 0.55rem 1rem 0.55rem calc(1rem - 3px);
+  border-left: 3px solid var(--line);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.matches {
+  border: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 4px 4px;
+  overflow: hidden;
+}
+
+.match {
+  border-bottom: 1px solid var(--grid-line);
+  border-left: 3px solid var(--line);
+}
+
+.match:last-child {
+  border-bottom: 0;
+}
+
+.match:nth-child(even) {
+  background: var(--row-alt);
+}
+
+.match.top {
+  border-left-color: var(--c-top);
+}
+
+.match.won {
+  border-left-color: var(--c-win);
+  background: rgba(95, 184, 122, 0.14);
+}
+
+.match.won:nth-child(even) {
+  background: rgba(95, 184, 122, 0.18);
+}
+
+.match.won .place,
+.match.won .of {
+  color: var(--c-win);
+}
+
+.match.is-new {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.match.is-open {
+  background: var(--panel);
+}
+
+.match.won.is-open {
+  background: rgba(95, 184, 122, 0.2);
+}
+
+.match-head {
+  padding-top: 0.7rem;
+  padding-bottom: 0.7rem;
+}
+
+.match-head:hover:not(:disabled) {
+  background: rgba(242, 238, 230, 0.05);
+}
+
+/* Lodrette gitterlinjer mellem talkolonnerne */
+.match-head > .cell,
+.list-head > span:nth-child(n + 3) {
+  border-left: 1px solid var(--grid-line);
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  padding-right: 0.2rem;
+}
+
+.list-head > span:nth-child(n + 3) {
+  border-left-color: var(--line);
+}
+
+.chip-toggle[aria-pressed="true"] {
+  background: rgba(232, 137, 74, 0.16);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.chip-clear {
+  border-style: dashed;
+  color: var(--dim);
+}
+
 /* ---------- Mobil / smal ---------- */
 
 @media (max-width: 1080px) {
@@ -1379,6 +1528,15 @@ tr.me td {
 
   .cell-l {
     display: block;
+  }
+
+  .match-head > .cell {
+    border-left: 0;
+    align-items: flex-start;
+  }
+
+  .summary .stat {
+    border-bottom: 1px solid var(--grid-line);
   }
 
   .search input {
