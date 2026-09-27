@@ -20,6 +20,7 @@
   --c-top: var(--top);
   --c-place: var(--beige);
   --c-hs: #8fb1d9;
+  --c-kda: #f0b27a;
   --c-time: #b9ae9a;
   --row-alt: #1a1917;
   --grid-line: #2c2a26;
@@ -1351,14 +1352,54 @@ tr.me td {
   color: var(--accent);
 }
 
+.big-trio {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--grid-line);
+  border-radius: 3px;
+  margin-bottom: 0.8rem;
+}
+
+.big-trio > div {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 0.6rem;
+  border-top: 3px solid transparent;
+}
+
+.big-trio > div + div {
+  border-left: 1px solid var(--grid-line);
+}
+
+.big-trio .t-kills { border-top-color: var(--c-kills); }
+.big-trio .t-kda { border-top-color: var(--c-kda); }
+.big-trio .t-dmg { border-top-color: var(--c-dmg); }
+.big-trio .t-kills .big { color: var(--c-kills); }
+.big-trio .t-kda .big { color: var(--c-kda); }
+.big-trio .t-dmg .big { color: var(--c-dmg); }
+
+.big-trio .big {
+  font-size: 1.75rem;
+}
+
+.season-note {
+  margin: 0 0 0.75rem;
+}
+
 /* ---------- Tabel-look: opsummering + kampliste ---------- */
 
 .summary {
+  grid-template-columns: repeat(auto-fit, minmax(6.4rem, 1fr));
   gap: 0;
   border: 1px solid var(--line);
   border-radius: 4px;
   overflow: hidden;
   background: var(--panel);
+}
+
+.summary .stat-value {
+  white-space: nowrap;
+  font-size: 1.75rem;
 }
 
 .summary .stat {
@@ -1368,20 +1409,22 @@ tr.me td {
   margin-right: -1px;
 }
 
-.stat.win { border-top-color: var(--c-win); background: rgba(95, 184, 122, 0.08); }
-.stat.top { border-top-color: var(--c-top); }
-.stat.place { border-top-color: var(--c-place); }
-.stat.kills { border-top-color: var(--c-kills); }
-.stat.dmg { border-top-color: var(--c-dmg); background: rgba(217, 99, 79, 0.07); }
-.stat.hs { border-top-color: var(--c-hs); }
-.stat.time { border-top-color: var(--c-time); }
+.stat.tone-win { border-top-color: var(--c-win); background: rgba(95, 184, 122, 0.08); }
+.stat.tone-top { border-top-color: var(--c-top); }
+.stat.tone-place { border-top-color: var(--c-place); }
+.stat.tone-kills { border-top-color: var(--c-kills); }
+.stat.tone-dmg { border-top-color: var(--c-dmg); background: rgba(217, 99, 79, 0.07); }
+.stat.tone-hs { border-top-color: var(--c-hs); }
+.stat.tone-kda { border-top-color: var(--c-kda); }
+.stat.tone-kda .stat-value { color: var(--c-kda); }
+.stat.tone-time { border-top-color: var(--c-time); }
 
-.stat.win .stat-value { color: var(--c-win); }
-.stat.top .stat-value { color: var(--c-top); }
-.stat.place .stat-value { color: var(--c-place); }
-.stat.kills .stat-value { color: var(--c-kills); }
-.stat.dmg .stat-value { color: var(--c-dmg); }
-.stat.hs .stat-value { color: var(--c-hs); }
+.stat.tone-win .stat-value { color: var(--c-win); }
+.stat.tone-top .stat-value { color: var(--c-top); }
+.stat.tone-place .stat-value { color: var(--c-place); }
+.stat.tone-kills .stat-value { color: var(--c-kills); }
+.stat.tone-dmg .stat-value { color: var(--c-dmg); }
+.stat.tone-hs .stat-value { color: var(--c-hs); }
 
 /* Kolonnefarver (header + celler) */
 .list-head .t-kills, .cell.t-kills .cell-v { color: var(--c-kills); }

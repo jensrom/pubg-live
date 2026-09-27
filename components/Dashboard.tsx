@@ -441,6 +441,7 @@ export default function Dashboard() {
             <Stat value={`${summary.top10}`} label={`top 10 (${pct(summary.n ? summary.top10 / summary.n : 0)})`} tone="top" />
             <Stat value={`#${num(summary.avgPlace, 1)}`} label="avg. placement" tone="place" />
             <Stat value={num(summary.kd, 2)} label="K/D" tone="kills" />
+            <Stat value={num(summary.kda, 2)} label="KDA" tone="kda" />
             <Stat value={num(summary.avgKills, 1)} label="kills per match" tone="kills" />
             <Stat value={num(summary.avgDmg)} label="avg. damage" tone="dmg" />
             <Stat value={pct(summary.hs)} label="headshot rate" tone="hs" />
@@ -636,11 +637,11 @@ function ZoneTimer({ fraction }: { fraction: number }) {
   );
 }
 
-type Tone = "win" | "top" | "place" | "kills" | "dmg" | "hs" | "time";
+type Tone = "win" | "top" | "place" | "kills" | "kda" | "dmg" | "hs" | "time";
 
 function Stat({ value, label, tone }: { value: string | number; label: string; tone?: Tone }) {
   return (
-    <div className={`stat ${tone ?? ""}`}>
+    <div className={`stat ${tone ? `tone-${tone}` : ""}`}>
       <span className="stat-value">{value}</span>
       <span className="stat-label">{label}</span>
     </div>

@@ -131,6 +131,12 @@ export default function SeasonPanel({
           <ModeCard key={m} title={`${MODE_NAMES[m]} ${view.toUpperCase()}`} s={normal.get(modeKey(m))!} />
         ))}
       </div>
+      {stats && (
+        <p className="muted small season-note">
+          K/D = kills ÷ deaths · KDA = (kills + assists) ÷ deaths · Percentages are rounded down like in-game. PUBG&apos;s
+          API has no average placement for normal modes, so that figure is only shown for ranked.
+        </p>
+      )}
       {MODES.some((m) => !normal.has(modeKey(m))) && stats && (
         <p className="muted small empty-modes">
           No matches in{" "}
@@ -149,14 +155,42 @@ function tierLabel(tier: string, sub: string) {
   return `${tier} ${sub}`.trim();
 }
 
+// PUBG viser procenter rundet ned (fx 5/40 = 12,5 % vises som 12 %). Vi gør det samme, så tallene matcher.
+function gamePct(part: number, whole: number) {
+  return whole ? `${Math.floor((part / whole) * 100)}%` : "–";
+}
+
+function Ratios({ kd, kda, dmg }: { kd: number; kda: number; dmg: number }) {
+  return (
+    <div className="big-trio">
+      <div className="t-kills">
+        <span className="big">{num(kd, 2)}</span>
+        <span className="muted small">K/D</span>
+      </div>
+      <div className="t-kda">
+        <span className="big">{num(kda, 2)}</span>
+        <span className="muted small">KDA</span>
+      </div>
+      <div className="t-dmg">
+        <span className="big">{num(dmg, 1)}</span>
+        <span className="muted small">avg. damage</span>
+      </div>
+    </div>
+  );
+}
+
 function RankedCard({ s }: { s: RankedStats }) {
   const color = TIER_COLORS[s.tier] ?? TIER_COLORS.Unranked;
   const kd = s.deaths ? s.kills / s.deaths : s.kills;
+  const kda = s.deaths ? (s.kills + s.assists) / s.deaths : s.kills + s.assists;
   return (
     <article className="card card-ranked" style={{ ["--tier" as string]: color }}>
       <header className="card-head">
         <span className="card-title">Ranked {modeName(s.mode)}</span>
-        <span className="muted small">{s.rounds} matches</span>
+        <span className="card-badges">
+          <span className="muted small">{s.rounds} matches</span>
+          {s.wins > 0 && <span className="badge badge-win">{s.wins} W</span>}
+        </span>
       </header>
       <div className="tier">
         <TierMark color={color} />
@@ -168,14 +202,18 @@ function RankedCard({ s }: { s: RankedStats }) {
           </span>
         </div>
       </div>
+      <Ratios kd={kd} kda={kda} dmg={s.damage / s.rounds} />
       <dl className="kv">
-        <KV k="K/D" v={num(kd, 2)} hi />
-        <KV k="Avg. damage" v={num(s.damage / s.rounds)} hi />
         <KV k="Avg. placement" v={`#${num(s.avgRank, 1)}`} />
-        <KV k="Wins" v={`${s.wins} (${pct(s.winRatio, 1)})`} />
-        <KV k="Top 10" v={pct(s.top10Ratio, 1)} />
-        <KV k="KDA" v={num(s.kda, 2)} />
-        <KV k="Headshot" v={pct(s.kills ? s.headshots / s.kills : 0, 1)} />
+        <KV k="Avg. kills" v={num(s.kills / s.rounds, 1)} />
+        <KV k="Win rate" v={gamePct(s.wins, s.rounds)} />
+        <KV k="Top 10 rate" v={pct(s.top10Ratio)} />
+        <KV k="Total kills" v={num(s.kills)} />
+        <KV k="Total assists" v={num(s.assists)} />
+        <KV k="Total deaths" v={num(s.deaths)} />
+        <KV k="Total DBNOs" v={num(s.dbnos)} />
+        <KV k="Headshot kills" v={`${num(s.headshots)} (${gamePct(s.headshots, s.kills)})`} />
+        <KV k="Total damage" v={num(s.damage)} />
         <KV k="Most kills" v={s.roundMostKills} />
         <KV k="Longest kill" v={`${num(s.longestKill)} m`} />
         {s.avgSurvivalTime > 0 && <KV k="Avg. survived" v={mmss(s.avgSurvivalTime)} />}
@@ -185,8 +223,10 @@ function RankedCard({ s }: { s: RankedStats }) {
 }
 
 function ModeCard({ title, s }: { title: string; s: ModeStats }) {
-  const kd = s.kills / Math.max(1, s.losses);
-  const kda = (s.kills + s.assists) / Math.max(1, s.losses);
+  // PUBG's API giver "losses" = antal kampe man døde i. Det er det tal spillet kalder "Total deaths".
+  const deaths = s.losses;
+  const kd = deaths ? s.kills / deaths : s.kills;
+  const kda = deaths ? (s.kills + s.assists) / deaths : s.kills + s.assists;
   return (
     <article className="card">
       <header className="card-head">
@@ -197,27 +237,23 @@ function ModeCard({ title, s }: { title: string; s: ModeStats }) {
           {s.top10s > 0 && <span className="badge badge-top">{s.top10s} top 10</span>}
         </span>
       </header>
-      <div className="big-pair">
-        <div>
-          <span className="big">{num(kd, 2)}</span>
-          <span className="muted small">K/D</span>
-        </div>
-        <div>
-          <span className="big big-red">{num(s.damage / s.rounds)}</span>
-          <span className="muted small">avg. damage</span>
-        </div>
-      </div>
+      <Ratios kd={kd} kda={kda} dmg={s.damage / s.rounds} />
       <dl className="kv">
-        <KV k="Win %" v={pct(s.wins / s.rounds, 1)} />
-        <KV k="Top 10 %" v={pct(s.top10s / s.rounds, 1)} />
-        <KV k="KDA" v={num(kda, 2)} />
-        <KV k="Headshot" v={pct(s.kills ? s.headshots / s.kills : 0, 1)} />
-        <KV k="Kills/match" v={num(s.kills / s.rounds, 2)} />
+        <KV k="Matches played" v={num(s.rounds)} />
+        <KV k="Avg. kills" v={num(s.kills / s.rounds, 1)} />
+        <KV k="Win rate" v={gamePct(s.wins, s.rounds)} />
+        <KV k="Total wins" v={num(s.wins)} />
+        <KV k="Top 10 rate" v={gamePct(s.top10s, s.rounds)} />
+        <KV k="Total kills" v={num(s.kills)} />
+        <KV k="Total assists" v={num(s.assists)} />
+        <KV k="Total deaths" v={num(deaths)} />
+        <KV k="Total DBNOs" v={num(s.dbnos)} />
+        <KV k="Total revives" v={num(s.revives)} />
+        <KV k="Headshot kills" v={`${num(s.headshots)} (${gamePct(s.headshots, s.kills)})`} />
+        <KV k="Total damage" v={num(s.damage)} />
+        <KV k="Avg. survived" v={mmss(s.timeSurvived / s.rounds)} />
         <KV k="Most kills" v={s.roundMostKills} />
         <KV k="Longest kill" v={`${num(s.longestKill)} m`} />
-        <KV k="Avg. survived" v={mmss(s.timeSurvived / s.rounds)} />
-        <KV k="Knocks" v={num(s.dbnos)} />
-        <KV k="Revives" v={num(s.revives)} />
       </dl>
     </article>
   );
