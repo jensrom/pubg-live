@@ -588,35 +588,7 @@ export default function Dashboard() {
                 </section>
               )}
 
-              <section className="side-card">
-                <h2>Records in selection</h2>
-                <dl className="kv">
-                  <div>
-                    <dt>Most kills</dt>
-                    <dd>{summary.mostKills}</dd>
-                  </div>
-                  <div>
-                    <dt>Most damage</dt>
-                    <dd>{num(summary.bestDmg)}</dd>
-                  </div>
-                  <div>
-                    <dt>Longest kill</dt>
-                    <dd>{num(summary.longest)} m</dd>
-                  </div>
-                  <div>
-                    <dt>KDA</dt>
-                    <dd>{num(summary.kda, 2)}</dd>
-                  </div>
-                  <div>
-                    <dt>Knocks</dt>
-                    <dd>{summary.knocks}</dd>
-                  </div>
-                  <div>
-                    <dt>Assists</dt>
-                    <dd>{summary.assists}</dd>
-                  </div>
-                </dl>
-              </section>
+              <Records matches={filtered} now={now} onPick={pick} />
             </aside>
           </div>
         </>
@@ -671,6 +643,98 @@ function FilterRow({
         </button>
       ))}
     </div>
+  );
+}
+
+/* Bedste kamp: skade + 100 pr. kill + 50 pr. knock + bonus for placering (win 300, top 10 100).
+   Formlen står på siden, så man kan se hvorfor netop den kamp vinder. */
+function gameScore(m: MatchSummary) {
+  return m.damage + m.kills * 100 + m.dbnos * 50 + (m.placement === 1 ? 300 : m.placement <= 10 ? 100 : 0);
+}
+
+function Records({ matches, now, onPick }: { matches: MatchSummary[]; now: number; onPick: (id: string) => void }) {
+  if (!matches.length) return null;
+  const top = (f: (m: MatchSummary) => number) => matches.reduce((a, m) => (f(m) > f(a) ? m : a), matches[0]);
+  const best = top(gameScore);
+  const n = matches.length;
+  const sum = (f: (m: MatchSummary) => number) => matches.reduce((a, m) => a + f(m), 0);
+  const recs: [string, MatchSummary, string][] = [
+    ["Most kills", top((m) => m.kills), ""],
+    ["Most damage", top((m) => m.damage), ""],
+    ["Most knocks", top((m) => m.dbnos), ""],
+    ["Most assists", top((m) => m.assists), ""],
+    ["Longest kill", top((m) => m.longestKill), ""],
+    ["Longest survived", top((m) => m.timeSurvived), ""],
+  ];
+  const val = (label: string, m: MatchSummary) =>
+    label === "Most kills"
+      ? m.kills
+      : label === "Most damage"
+        ? num(m.damage)
+        : label === "Most knocks"
+          ? m.dbnos
+          : label === "Most assists"
+            ? m.assists
+            : label === "Longest kill"
+              ? `${Math.round(m.longestKill)} m`
+              : mmss(m.timeSurvived);
+
+  return (
+    <section className="side-card records">
+      <h2>Records in selection</h2>
+
+      <button type="button" className={`best-game ${best.placement === 1 ? "won" : ""}`} onClick={() => onPick(best.id)}>
+        <span className="best-label">Best game</span>
+        <span className="best-main">
+          <strong>{best.placement === 1 ? "WIN" : `#${best.placement}`}</strong>
+          <span className="muted">/{best.teams}</span> {best.map}
+        </span>
+        <span className="best-stats">
+          <span className="t-kills">{best.kills} kills</span>
+          <span className="t-dmg">{num(best.damage)} dmg</span>
+          <span>{best.dbnos} knocks</span>
+          <span>{best.assists} assists</span>
+        </span>
+        <span className="muted small">
+          {modeLabel(best.mode)} · {ago(best.createdAt, now)} · open match →
+        </span>
+      </button>
+
+      <table className="side-table rec-table">
+        <tbody>
+          {recs.map(([label, m]) => (
+            <tr key={label}>
+              <th scope="row">{label}</th>
+              <td>{val(label, m)}</td>
+              <td>
+                <button type="button" className="linkish small" onClick={() => onPick(m.id)} title={`${m.map}, ${ago(m.createdAt, now)}`}>
+                  {m.map} →
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="per-game">
+        <div>
+          <span className="pg-v">{num(sum((m) => m.dbnos) / n, 1)}</span>
+          <span className="pg-l">knocks / game</span>
+          <span className="muted small">{sum((m) => m.dbnos)} total</span>
+        </div>
+        <div>
+          <span className="pg-v">{num(sum((m) => m.assists) / n, 1)}</span>
+          <span className="pg-l">assists / game</span>
+          <span className="muted small">{sum((m) => m.assists)} total</span>
+        </div>
+        <div>
+          <span className="pg-v t-kills">{num(sum((m) => m.kills) / n, 1)}</span>
+          <span className="pg-l">kills / game</span>
+          <span className="muted small">{sum((m) => m.kills)} total</span>
+        </div>
+      </div>
+      <p className="muted small">Best game score = damage + 100 × kills + 50 × knocks + placement bonus (win 300, top 10 100).</p>
+    </section>
   );
 }
 

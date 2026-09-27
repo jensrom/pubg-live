@@ -631,8 +631,6 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  position: sticky;
-  top: 1rem;
 }
 
 .side-card {
@@ -1219,9 +1217,176 @@ button:disabled {
 }
 
 .roster-wrap {
-  max-height: 26rem;
+  max-height: 36rem;
   overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 4px;
 }
+
+.roster-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-2);
+}
+
+.roster th,
+.roster td {
+  padding-left: 0.75rem;
+}
+
+.roster > thead th {
+  top: 0;
+  z-index: 2;
+  background: var(--panel-2);
+}
+
+.roster .team-row {
+  cursor: pointer;
+}
+
+.roster .team-group:nth-of-type(even) .team-row {
+  background: var(--row-alt);
+}
+
+.roster .team-row:hover {
+  background: rgba(242, 238, 230, 0.06);
+}
+
+.roster .team-group.winner .team-row {
+  background: rgba(95, 184, 122, 0.14);
+}
+
+.roster .team-group.winner .team-row td:first-child,
+.roster .team-group.winner .team-row th {
+  color: var(--c-win);
+}
+
+.roster .team-group.open .team-row {
+  background: var(--panel-2);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* Hold man har været i kamp med */
+.roster .team-group.fought .team-row {
+  background: rgba(232, 137, 74, 0.1);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.roster .team-group.killer .team-row {
+  background: rgba(217, 99, 79, 0.14);
+  box-shadow: inset 3px 0 0 var(--red);
+}
+
+.roster-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--dim);
+}
+
+.fought-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.fight-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+}
+
+.ftag {
+  font: 600 0.7rem/1 var(--body);
+  padding: 0.22rem 0.4rem;
+  border-radius: 2px;
+  border: 1px solid var(--line);
+  color: var(--beige);
+  white-space: nowrap;
+}
+
+.ftag-killer {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+
+.ftag-kill {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.ftag-dmg {
+  color: var(--dim);
+}
+
+.ftag-time {
+  color: var(--dim);
+  border-style: dashed;
+}
+
+.expander {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.chev {
+  display: inline-block;
+  width: 0.9rem;
+  color: var(--accent);
+}
+
+.team-players > td {
+  padding: 0 0.75rem 0.75rem 1.9rem;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.players {
+  border: 1px solid var(--grid-line);
+  background: var(--bg);
+}
+
+.players th,
+.players td {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.875rem;
+  border-left: 1px solid var(--grid-line);
+}
+
+.players th:first-child,
+.players td:first-child {
+  border-left: 0;
+}
+
+.players thead th {
+  position: static;
+  background: var(--panel);
+  font-size: 0.75rem;
+}
+
+.players tbody tr:nth-child(even) {
+  background: var(--row-alt);
+}
+
+/* Kolonnefarver i tabeller */
+table .t-kills { color: var(--c-kills); }
+table .t-dmg { color: var(--c-dmg); }
+table .t-hs { color: var(--c-hs); }
+table .t-time { color: var(--c-time); }
+thead .t-kills, thead .t-dmg, thead .t-hs, thead .t-time { font-weight: 600; }
 
 table {
   width: 100%;
@@ -1350,6 +1515,194 @@ tr.me td {
 
 .lg-land {
   color: var(--accent);
+}
+
+/* ---------- Records ---------- */
+
+.best-game {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  margin-bottom: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  text-align: left;
+  background: rgba(232, 137, 74, 0.08);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+}
+
+.best-game.won {
+  background: rgba(95, 184, 122, 0.12);
+  border-left-color: var(--c-win);
+}
+
+.best-game:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.best-label {
+  font: 600 0.7rem/1 var(--body);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+
+.best-main {
+  font: 600 1.25rem/1.1 var(--cond);
+}
+
+.best-game.won .best-main strong {
+  color: var(--c-win);
+}
+
+.best-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.best-stats .t-kills { color: var(--c-kills); }
+.best-stats .t-dmg { color: var(--c-dmg); }
+
+.rec-table td:last-child {
+  text-align: right;
+}
+
+.rec-table tbody tr:nth-child(even) {
+  background: var(--row-alt);
+}
+
+.per-game {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 0.75rem;
+  border: 1px solid var(--grid-line);
+  border-radius: 3px;
+}
+
+.per-game > div {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 0.6rem;
+}
+
+.per-game > div + div {
+  border-left: 1px solid var(--grid-line);
+}
+
+.pg-v {
+  font: 600 1.4rem/1 var(--cond);
+  font-variant-numeric: tabular-nums;
+}
+
+.pg-v.t-kills { color: var(--c-kills); }
+
+.pg-l {
+  font-size: 0.75rem;
+  color: var(--dim);
+  margin-top: 0.15rem;
+}
+
+.records > p {
+  margin-top: 0.6rem;
+}
+
+/* ---------- All-time high ---------- */
+
+.ath {
+  position: relative;
+}
+
+.ath-main {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.35rem 0.7rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--tier, var(--accent));
+  text-align: left;
+}
+
+.ath-label {
+  font: 600 0.7rem/1 var(--body);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+
+.ath-value {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.ath-tier {
+  font: 700 1.1rem/1 var(--cond);
+  color: var(--tier, var(--sand));
+}
+
+.ath-meta {
+  font-size: 0.78rem;
+  color: var(--dim);
+}
+
+.ath-progress {
+  font-size: 0.72rem;
+  color: var(--dim);
+  border: 1px dashed var(--line);
+  border-radius: 2px;
+  padding: 0.15rem 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ath-pop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  width: min(34rem, 92vw);
+  padding: 0.75rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.ath-pop p {
+  margin: 0 0 0.5rem;
+}
+
+.ath-table {
+  font-size: 0.85rem;
+}
+
+.ath-table th,
+.ath-table td {
+  padding: 0.35rem 0.5rem;
+}
+
+.ath-table tbody tr {
+  cursor: pointer;
+}
+
+.ath-table tbody tr:nth-child(even) {
+  background: var(--row-alt);
+}
+
+.ath-table tbody tr:hover {
+  background: rgba(242, 238, 230, 0.06);
+}
+
+.ath-table tr.ath-top {
+  background: rgba(232, 137, 74, 0.12);
+}
+
+.ath-table thead th {
+  position: static;
 }
 
 .big-trio {

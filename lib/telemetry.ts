@@ -1,6 +1,6 @@
 import weaponNames from "./weapons.json";
 import { mapSizeCm } from "./maps";
-import type { KillEvent, MatchDetail, Point, TeamRoute, WeaponDamage, ZoneCircle } from "./types";
+import type { KillEvent, MatchDetail, Point, TeamFight, TeamRoute, WeaponDamage, ZoneCircle } from "./types";
 
 /* PUBG-telemetri er én stor JSON-array med events. Vi læser kun de få typer vi skal bruge
    og smider resten væk, så svaret til browseren bliver få KB i stedet for 10-30 MB. */
@@ -88,6 +88,15 @@ export function analyzeTelemetry(
   const taken = new Map<string, { weapon: string; damage: number; hits: number }>();
   const zones: ZoneCircle[] = [];
   const vehicles = new Set<string>();
+  const fights = new Map<number, TeamFight>();
+  const fight = (teamId: number, t: number) => {
+    let f = fights.get(teamId);
+    if (!f) {
+      f = { teamId, dealt: 0, taken: 0, knocks: 0, kills: 0, knockedBy: 0, killedBy: false, first: t };
+      fights.set(teamId, f);
+    }
+    return f;
+  };
   let damageTaken = 0;
   let firstFight: number | null = null;
   let landing: { x: number; y: number } | null = null;
@@ -154,6 +163,7 @@ export function analyzeTelemetry(
           row.hits += 1;
           if (isHead(info)) row.headshots += 1;
           if (firstFight === null) firstFight = sec(e);
+          fight(vic.teamId, sec(e)).dealt += dmg;
         }
         if (vic?.accountId === accountId) {
           damageTaken += dmg;
@@ -163,6 +173,7 @@ export function analyzeTelemetry(
           r.hits += 1;
           taken.set(w, r);
           if (att && att.teamId !== myTeam && firstFight === null) firstFight = sec(e);
+          if (att && att.teamId !== myTeam) fight(att.teamId, sec(e)).taken += dmg;
         }
         break;
       }
@@ -182,7 +193,9 @@ export function analyzeTelemetry(
             at: norm(vic.location),
           });
           weaponRow(weaponLabel(info)).knocks += 1;
+          if (vic.teamId !== myTeam) fight(vic.teamId, sec(e)).knocks += 1;
         } else if (vic?.accountId === accountId) {
+          if (att && att.teamId !== myTeam) fight(att.teamId, sec(e)).knockedBy += 1;
           kills.push({
             t: sec(e),
             kind: "knocked",
@@ -211,7 +224,9 @@ export function analyzeTelemetry(
             at: norm(victim.location),
           });
           weaponRow(weaponLabel(info)).kills += 1;
+          if (victim.teamId !== myTeam) fight(victim.teamId, sec(e)).kills += 1;
         } else if (victim?.accountId === accountId) {
+          if (killer && killer.teamId !== myTeam && killer.accountId !== accountId) fight(killer.teamId, sec(e)).killedBy = true;
           const suicide = Boolean(e.isSuicide);
           kills.push({
             t: sec(e),
@@ -271,6 +286,9 @@ export function analyzeTelemetry(
     landing,
     landingTime,
     damageTaken: Math.round(damageTaken),
+    fights: [...fights.values()]
+      .map((f) => ({ ...f, dealt: Math.round(f.dealt), taken: Math.round(f.taken) }))
+      .sort((a, b) => a.first - b.first),
     firstFight,
     vehicles: [...vehicles],
   };

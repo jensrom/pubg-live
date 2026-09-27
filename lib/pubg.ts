@@ -22,9 +22,32 @@ export class PubgError extends Error {
   }
 }
 
+/* PUBG tillader 10 kald/min på alt undtagen /matches. Vi holder os selv under 9 pr. instans,
+   så en baggrundsscanning af sæsoner aldrig får den levende opdatering til at fejle. */
+const LIMIT = 9;
+const WINDOW = 60_000;
+const recent: number[] = [];
+
+async function rateSlot(path: string) {
+  if (path.includes("/matches/")) return;
+  for (let tries = 0; tries < 30; tries++) {
+    const now = Date.now();
+    while (recent.length && now - recent[0] > WINDOW) recent.shift();
+    if (recent.length < LIMIT) {
+      recent.push(now);
+      return;
+    }
+    const wait = WINDOW - (now - recent[0]) + 50;
+    if (wait > 20_000) break;
+    await new Promise((r) => setTimeout(r, wait));
+  }
+  throw new PubgError(429, "PUBG's limit of 10 requests per minute was hit. Retrying on next refresh.");
+}
+
 async function pubg<T>(path: string): Promise<T> {
   const key = process.env.PUBG_API_KEY;
   if (!key) throw new PubgError(500, "PUBG_API_KEY is not set in the environment variables.");
+  await rateSlot(path);
 
   const res = await fetch(`${API}${path}`, {
     headers: { Authorization: `Bearer ${key}`, Accept: "application/vnd.api+json" },
@@ -178,6 +201,24 @@ function splitMatch(m: RawMatch) {
   return { participants, rosters };
 }
 
+function toTeammate(s: RawStats, accountId: string): Teammate {
+  return {
+    playerId: s.playerId,
+    name: s.name,
+    kills: s.kills,
+    assists: s.assists,
+    damage: Math.round(s.damageDealt),
+    dbnos: s.DBNOs,
+    revives: s.revives,
+    headshots: s.headshotKills,
+    longestKill: Math.round(s.longestKill),
+    timeSurvived: Math.round(s.timeSurvived),
+    distance: Math.round(s.walkDistance + s.rideDistance + s.swimDistance),
+    deathType: s.deathType,
+    isMe: s.playerId === accountId,
+  };
+}
+
 function summarizeMatch(m: RawMatch, accountId: string): MatchSummary | null {
   const { participants, rosters } = splitMatch(m);
 
@@ -189,24 +230,7 @@ function summarizeMatch(m: RawMatch, accountId: string): MatchSummary | null {
 
   const team: Teammate[] = participants
     .filter((p) => teamIds.has(p.id))
-    .map((p) => {
-      const s = p.attributes.stats!;
-      return {
-        playerId: s.playerId,
-        name: s.name,
-        kills: s.kills,
-        assists: s.assists,
-        damage: Math.round(s.damageDealt),
-        dbnos: s.DBNOs,
-        revives: s.revives,
-        headshots: s.headshotKills,
-        longestKill: Math.round(s.longestKill),
-        timeSurvived: Math.round(s.timeSurvived),
-        distance: Math.round(s.walkDistance + s.rideDistance + s.swimDistance),
-        deathType: s.deathType,
-        isMe: s.playerId === accountId,
-      };
-    })
+    .map((p) => toTeammate(p.attributes.stats!, accountId))
     .sort((a, b) => b.damage - a.damage);
 
   const s = me.attributes.stats!;
@@ -280,6 +304,7 @@ export async function getMatchDetail(shard: Shard, matchId: string, accountId: s
         damage: Math.round(members.reduce((a, s) => a + s.damageDealt, 0)),
         distance: members.length ? Math.round(dist / members.length) : 0,
         isMine: members.some((s) => s.playerId === accountId),
+        members: members.map((s) => toTeammate(s, accountId)).sort((x, y) => y.damage - x.damage),
       };
     })
     .sort((a, b) => a.rank - b.rank);
@@ -417,7 +442,17 @@ export async function getStats(shard: Shard, accountId: string, season: string):
 
   const rankedAllowed = seasonId !== "lifetime" && (info?.ranked ?? false);
   const ranked = rankedAllowed
-    ? cached(`ranked:${shard}:${accountId}:${seasonId}`, ttl, async () => {
+    ? getRanked(shard, accountId, seasonId, ttl)
+    : Promise.resolve([] as RankedStats[]);
+
+  const [modes, rankedRes] = await Promise.all([normal, ranked.then((v) => ({ v, err: null as string | null })).catch((e) => ({ v: [] as RankedStats[], err: e instanceof Error ? e.message : "Error" }))]);
+
+  return { seasonId, modes, ranked: rankedRes.v, ...(rankedRes.err ? { rankedError: rankedRes.err } : {}) };
+}
+
+/** Ranked-stats for én sæson. Afsluttede sæsoner ændrer sig ikke og caches et døgn. */
+export function getRanked(shard: Shard, accountId: string, seasonId: string, ttl = 24 * 3600_000): Promise<RankedStats[]> {
+  return cached(`ranked:${shard}:${accountId}:${seasonId}`, ttl, async () => {
         const r = await pubg<{
           data: { attributes: { rankedGameModeStats: Record<string, RawRanked> } };
         }>(`/shards/${shard}/players/${accountId}/seasons/${seasonId}/ranked`);
@@ -450,10 +485,5 @@ export async function getStats(shard: Shard, accountId: string, season: string):
             })
           )
           .sort((a, b) => b.rounds - a.rounds);
-      })
-    : Promise.resolve([] as RankedStats[]);
-
-  const [modes, rankedRes] = await Promise.all([normal, ranked.then((v) => ({ v, err: null as string | null })).catch((e) => ({ v: [] as RankedStats[], err: e instanceof Error ? e.message : "Error" }))]);
-
-  return { seasonId, modes, ranked: rankedRes.v, ...(rankedRes.err ? { rankedError: rankedRes.err } : {}) };
+  });
 }

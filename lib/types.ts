@@ -171,6 +171,18 @@ export interface ZoneCircle {
   r: number; // radius som andel af kortets bredde
 }
 
+/** Et hold den viste spiller har været i kamp med (skade givet/taget, knocks, kills). */
+export interface TeamFight {
+  teamId: number;
+  dealt: number;
+  taken: number;
+  knocks: number;
+  kills: number;
+  knockedBy: number;
+  killedBy: boolean;
+  first: number; // sekunder fra kampstart
+}
+
 export interface RosterRow {
   rank: number;
   teamId: number;
@@ -179,6 +191,7 @@ export interface RosterRow {
   damage: number;
   distance: number; // gennemsnit pr. spiller i meter
   isMine: boolean;
+  members: Teammate[];
 }
 
 export interface MatchDetail {
@@ -199,6 +212,7 @@ export interface MatchDetail {
     damageTaken: number;
     firstFight: number | null;
     vehicles: string[];
+    fights: TeamFight[];
   } | null;
   telemetryError?: string;
 }

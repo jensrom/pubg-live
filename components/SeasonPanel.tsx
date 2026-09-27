@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import AllTimeHigh from "./AllTimeHigh";
 import { mmss, num, pct } from "@/lib/format";
 import {
   TIER_COLORS,
@@ -86,6 +87,12 @@ export default function SeasonPanel({
       <div className="panel-bar">
         <h2>Season stats</h2>
         <div className="panel-controls">
+          <AllTimeHigh
+            seasons={seasons}
+            shard={shard}
+            accountId={accountId}
+            onPick={(id) => setSeason(seasons.find((s) => s.id === id)?.current ? "current" : id)}
+          />
           <select aria-label="Season" value={season} onChange={(e) => setSeason(e.target.value)}>
             <option value="current">{currentLabel ? `${currentLabel} (current)` : "Current season"}</option>
             <option value="lifetime">Lifetime (all seasons)</option>
