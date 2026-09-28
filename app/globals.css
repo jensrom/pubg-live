@@ -1612,6 +1612,18 @@ tr.me td {
 
 /* ---------- All-time high ---------- */
 
+.rank-icon {
+  flex: none;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+}
+
+.ath-rank {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .ath {
   position: relative;
 }

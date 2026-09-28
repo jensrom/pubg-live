@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AllTimeHigh from "./AllTimeHigh";
+import RankIcon from "./RankIcon";
 import { mmss, num, pct } from "@/lib/format";
 import {
   TIER_COLORS,
@@ -200,7 +201,7 @@ function RankedCard({ s }: { s: RankedStats }) {
         </span>
       </header>
       <div className="tier">
-        <TierMark color={color} />
+        <RankIcon tier={s.tier} subTier={s.subTier} size={56} />
         <div>
           <strong className="tier-name">{tierLabel(s.tier, s.subTier)}</strong>
           <span className="tier-rp">{num(s.rp)} RP</span>
@@ -275,14 +276,6 @@ function KV({ k, v, hi }: { k: string; v: string | number; hi?: boolean }) {
   );
 }
 
-function TierMark({ color }: { color: string }) {
-  return (
-    <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
-      <path d="M22 3 39 12v20L22 41 5 32V12Z" fill="none" stroke={color} strokeWidth="2.5" />
-      <path d="M22 11 31 16v12l-9 5-9-5V16Z" fill={color} opacity="0.85" />
-    </svg>
-  );
-}
 
 function modeName(mode: string) {
   const [b, v] = mode.split("-");

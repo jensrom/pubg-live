@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { num } from "@/lib/format";
 import { TIER_COLORS, type RankedStats, type SeasonInfo, type Shard } from "@/lib/types";
+import RankIcon from "./RankIcon";
 
 /* All-time high: scanner ranked-stats for alle sæsoner én ad gangen (PUBG tillader 10 kald/min)
    og finder den bedste sæson. Prioritet: 1) bedste rank (tier, subtier, RP), 2) K/D, 3) avg. damage.
    Afsluttede sæsoner gemmes i browseren, så scanningen kun tager tid første gang. */
 
-const TIERS = ["Unranked", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Crystal", "Master", "Survivor"];
+// Rækkefølge efter ranked-revampet i sæson 36: Crystal ligger mellem Platinum og Diamond.
+const TIERS = ["Unranked", "Bronze", "Silver", "Gold", "Platinum", "Crystal", "Diamond", "Master", "Survivor"];
 const SCAN_EVERY_MS = 9_000;
 
 interface Best {
@@ -162,6 +164,7 @@ export default function AllTimeHigh({
         style={best ? { ["--tier" as string]: TIER_COLORS[best.tier] ?? TIER_COLORS.Unranked } : undefined}
       >
         <span className="ath-label">All-time high</span>
+        {best && <RankIcon tier={best.tier} subTier={best.subTier} size={34} />}
         {best ? (
           <span className="ath-value">
             <strong className="ath-tier">{tierText(best)}</strong>
@@ -215,7 +218,12 @@ export default function AllTimeHigh({
                     <th scope="row">
                       {b.label} <span className="muted small">{modeText(b.mode)}</span>
                     </th>
-                    <td style={{ color: TIER_COLORS[b.tier] ?? undefined }}>{tierText(b)}</td>
+                    <td style={{ color: TIER_COLORS[b.tier] ?? undefined }}>
+                      <span className="ath-rank">
+                        <RankIcon tier={b.tier} subTier={b.subTier} size={22} />
+                        {tierText(b)}
+                      </span>
+                    </td>
                     <td>{num(b.rp)}</td>
                     <td className="t-kills">{num(b.kd, 2)}</td>
                     <td className="t-dmg">{num(b.avgDmg)}</td>
