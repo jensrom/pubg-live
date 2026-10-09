@@ -1119,7 +1119,7 @@ button:disabled {
 
 .feed-row {
   display: grid;
-  grid-template-columns: 3.5rem 5.25rem minmax(0, 1fr) minmax(0, 12rem) 4.5rem;
+  grid-template-columns: 3.5rem 5.25rem minmax(0, 1fr) minmax(0, 12rem) 5.5rem 4.5rem;
   gap: 0.6rem;
   align-items: center;
   padding: 0.45rem 0;
@@ -1135,6 +1135,32 @@ button:disabled {
 
 .feed-d {
   text-align: right;
+}
+
+.feed-head {
+  font: 600 0.7rem/1 var(--body);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+  padding-top: 0;
+}
+
+.feed-dmg {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.dmg-out {
+  color: var(--accent);
+}
+
+.dmg-in {
+  color: var(--red);
+}
+
+.feed-head .feed-dmg {
+  font-weight: 600;
 }
 
 .feed-kind {
@@ -1960,11 +1986,21 @@ tr.me td {
   }
 
   .feed-row {
-    grid-template-columns: 3rem 4.75rem minmax(0, 1fr) 3.5rem;
+    grid-template-columns: 3rem 4.75rem minmax(0, 1fr) 4.5rem;
+  }
+
+  .feed-d {
+    grid-column: 4;
+    grid-row: 2;
+  }
+
+  .feed-head .feed-d,
+  .feed-head .feed-w {
+    display: none;
   }
 
   .feed-w {
-    grid-column: 3 / span 2;
+    grid-column: 3;
     grid-row: 2;
     color: var(--dim);
     font-size: 0.8125rem;

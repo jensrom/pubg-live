@@ -178,6 +178,14 @@ function Fights({
     return <p className="muted">No kills, knocks or death this match.</p>;
   return (
     <ol className="feed">
+      <li className="feed-row feed-head" aria-hidden="true">
+        <span>Time</span>
+        <span>Event</span>
+        <span>Player</span>
+        <span className="feed-w">Weapon</span>
+        <span className="feed-dmg">Damage</span>
+        <span className="feed-d">Dist.</span>
+      </li>
       {tele.events.map((e, i) => (
         <li key={i} className={`feed-row feed-${e.kind}`}>
           <span className="feed-t">{mmss(e.t)}</span>
@@ -200,6 +208,16 @@ function Fights({
           <span className="feed-w">
             {e.weapon}
             {e.headshot && <span className="tag tag-hs">HS</span>}
+          </span>
+          <span
+            className={`feed-dmg${e.kind === "kill" || e.kind === "knock" ? " dmg-out" : " dmg-in"}`}
+            title={
+              e.kind === "kill" || e.kind === "knock"
+                ? `Your damage to ${e.other} up to this point (${e.hits} hits)`
+                : `${e.other}'s damage to you up to this point (${e.hits} hits)`
+            }
+          >
+            {e.damage ? `${e.damage} dmg` : "–"}
           </span>
           <span className="feed-d">{e.distance ? `${e.distance} m` : "–"}</span>
         </li>

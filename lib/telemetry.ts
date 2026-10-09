@@ -97,6 +97,12 @@ export function analyzeTelemetry(
     }
     return f;
   };
+  // Skade mellem to bestemte spillere (angriber|offer) — bruges til damage-tæller i kill-feedet
+  const pair = new Map<string, { damage: number; hits: number }>();
+  const pairDmg = (a?: string, v?: string) => {
+    const r = a && v ? pair.get(`${a}|${v}`) : undefined;
+    return { damage: Math.round(r?.damage ?? 0), hits: r?.hits ?? 0 };
+  };
   let damageTaken = 0;
   let firstFight: number | null = null;
   let landing: { x: number; y: number } | null = null;
@@ -157,6 +163,13 @@ export function analyzeTelemetry(
         const dmg = Number(e.damage) || 0;
         if (dmg <= 0) break;
         const info = e as unknown as DamageInfo;
+        if (att?.accountId && vic?.accountId && (att.accountId === accountId || vic.accountId === accountId)) {
+          const k = `${att.accountId}|${vic.accountId}`;
+          const pr = pair.get(k) ?? { damage: 0, hits: 0 };
+          pr.damage += dmg;
+          pr.hits += 1;
+          pair.set(k, pr);
+        }
         if (att?.accountId === accountId && vic && vic.teamId !== myTeam) {
           const row = weaponRow(weaponLabel(info));
           row.damage += dmg;
@@ -191,6 +204,7 @@ export function analyzeTelemetry(
             distance: Math.round((info.distance ?? 0) / 100),
             headshot: isHead(info),
             at: norm(vic.location),
+            ...pairDmg(accountId, vic.accountId),
           });
           weaponRow(weaponLabel(info)).knocks += 1;
           if (vic.teamId !== myTeam) fight(vic.teamId, sec(e)).knocks += 1;
@@ -204,6 +218,7 @@ export function analyzeTelemetry(
             distance: Math.round((info.distance ?? 0) / 100),
             headshot: isHead(info),
             at: norm(vic.location),
+            ...pairDmg(att?.accountId, accountId),
           });
         }
         break;
@@ -222,6 +237,7 @@ export function analyzeTelemetry(
             distance: Math.round((info?.distance ?? 0) / 100),
             headshot: isHead(info),
             at: norm(victim.location),
+            ...pairDmg(accountId, victim.accountId),
           });
           weaponRow(weaponLabel(info)).kills += 1;
           if (victim.teamId !== myTeam) fight(victim.teamId, sec(e)).kills += 1;
@@ -236,6 +252,7 @@ export function analyzeTelemetry(
             distance: Math.round((info?.distance ?? 0) / 100),
             headshot: isHead(info),
             at: norm(victim.location),
+            ...(suicide ? { damage: 0, hits: 0 } : pairDmg(killer?.accountId, accountId)),
           });
         }
         break;

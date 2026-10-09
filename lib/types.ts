@@ -146,6 +146,10 @@ export interface KillEvent {
   distance: number; // meter
   headshot: boolean;
   at: { x: number; y: number } | null;
+  /** kill/knock: din samlede skade på offeret indtil da. death/knocked: modstanderens skade på dig. */
+  damage: number;
+  /** antal træffere bag damage */
+  hits: number;
 }
 
 export interface WeaponDamage {
